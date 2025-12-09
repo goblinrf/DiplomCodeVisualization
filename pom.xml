@@ -16,8 +16,9 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>server</module>
+        <module>auth_service</module>
         <module>web</module>
+        <module>block-schema</module>
     </modules>
 
     <properties>

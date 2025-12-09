@@ -8,7 +8,7 @@
         <version>${revision}</version>
     </parent>
 
-    <artifactId>server</artifactId>
+    <artifactId>auth_service</artifactId>
 
     <dependencies>
 

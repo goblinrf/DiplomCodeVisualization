@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Генерация блок-схемы</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <style>
-        #diagramCanvas { width: 100%; height: 500px; background:#111; border:1px solid #333; }
-    </style>
-    <script src="/js/auth-check.js" defer></script>
 </head>
 <body>
 
@@ -30,7 +26,7 @@
                 </div>
             </div>
 
-            <!-- История слева -->
+            <!-- История -->
             <div class="card mt-4">
                 <div class="card-header fw-bold">Diagram History</div>
                 <ul id="historyList" class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;"></ul>
@@ -44,8 +40,13 @@
                     Flowchart Output
                     <button id="downloadBtn" class="btn btn-success btn-sm d-none">PNG</button>
                 </div>
+
                 <div class="card-body bg-dark">
-                    <canvas id="diagramCanvas"></canvas>
+                    <!-- ВАЖНО: canvas заменён на этот div -->
+                    <div id="diagramOutput"
+                         class="bg-dark p-2"
+                         style="min-height: 500px; overflow: auto; color: white;">
+                    </div>
                 </div>
             </div>
         </div>
@@ -54,38 +55,72 @@
 </div>
 
 <script>
-    const canvas = document.getElementById("diagramCanvas");
-    const ctx = canvas.getContext("2d");
+    const outputDiv = document.getElementById("diagramOutput");
 
-    function resizeCanvas() {
-      canvas.width = canvas.clientWidth;
-      canvas.height = 500;
-    }
+    document.getElementById("generateBtn").addEventListener("click", async () => {
+        const code = document.getElementById("inputCode").value.trim();
+        if (!code) return;
 
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+        outputDiv.innerHTML = "<p class='text-light'>Генерация...</p>";
 
-    document.getElementById("generateBtn").addEventListener("click", () => {
-      const code = document.getElementById("inputCode").value;
-      if (!code.trim()) return;
+        try {
+            const response = await fetch("http://localhost:8083/api/blockschema/generate", {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" },
+                body: code,
+                credentials: "include"
+            });
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (!response.ok) {
+                const err = await response.text();
+                outputDiv.innerHTML = `<p class='text-danger'>Ошибка: ${err}</p>`;
+                return;
+            }
 
-      ctx.fillStyle = "#007bff";
-      ctx.fillRect(50, 50, 200, 80);
+            const svgText = await response.text();
+            outputDiv.innerHTML = svgText;
 
-      ctx.fillStyle = "white";
-      ctx.font = "16px Arial";
-      ctx.fillText("Пример блок-схемы", 60, 95);
+            document.getElementById("downloadBtn").classList.remove("d-none");
 
-      document.getElementById("downloadBtn").classList.remove("d-none");
+            const now = new Date();
+            const item = document.createElement("li");
+            item.className = "list-group-item";
+            item.textContent = `${now.toLocaleTimeString()} — ${code.slice(0, 20)}...`;
+            document.getElementById("historyList").prepend(item);
 
-      const now = new Date();
-      const item = document.createElement("li");
-      item.className = "list-group-item";
-      item.textContent = `${now.toLocaleTimeString()} — ${code.slice(0, 20)}...`;
-      document.getElementById("historyList").prepend(item);
+        } catch (e) {
+            outputDiv.innerHTML = `<p class='text-danger'>Ошибка: ${e}</p>`;
+        }
     });
+
+    // ---- PNG Export ----
+    document.getElementById("downloadBtn").addEventListener("click", () => {
+        const svgElement = outputDiv.querySelector("svg");
+        if (!svgElement) return;
+
+        const svgData = new XMLSerializer().serializeToString(svgElement);
+        const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(svgBlob);
+
+        const img = new Image();
+        img.onload = function () {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+
+            const link = document.createElement("a");
+            link.download = "diagram.png";
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+
+            URL.revokeObjectURL(url);
+        };
+        img.src = url;
+    });
+
+    // Logout
     document.getElementById("logoutBtn").onclick = async () => {
         await fetch("http://localhost:8081/logout", {
             method: "POST",
@@ -93,12 +128,6 @@
         });
         window.location.href = "/login.html";
     };
-    document.getElementById("downloadBtn").addEventListener("click", () => {
-      const link = document.createElement('a');
-      link.download = "diagram.png";
-      link.href = canvas.toDataURL();
-      link.click();
-    });
 </script>
 
 </body>

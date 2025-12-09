@@ -1,0 +1,10 @@
+spring:
+  security:
+    session:
+      creation-policy: IF_REQUIRED
+server:
+  port: 8083
+
+logging:
+  level:
+    org.springframework.security: DEBUG
