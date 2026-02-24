@@ -136,9 +136,6 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <mainClass>cloudStorage.server.ServerApplication</mainClass>
-                </configuration>
             </plugin>
         </plugins>
     </build>
